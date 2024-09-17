@@ -2,41 +2,41 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"runtime"
 	"sync"
 	"time"
 )
 
 const MatrixSize = 1000
-const Threads = 8
+const Threads = 24
 
-func generateInitialMatrix(coef int) [][]int {
+func generateRandomMatrix() [][]int {
 	initialMatrix := make([][]int, MatrixSize)
 	for i := 0; i < MatrixSize; i++ {
 		initialMatrix[i] = make([]int, MatrixSize)
 		for j := 0; j < MatrixSize; j++ {
-			initialMatrix[i][j] = i*MatrixSize/coef + j*coef
+			initialMatrix[i][j] = rand.Int()
 		}
 	}
 	return initialMatrix
 }
 
-func multiplySquareMatrixNon(a, b [][]int) [][]int {
+func multiplySquareMatrix(a, b [][]int) [][]int {
 	result := make([][]int, MatrixSize)
 	for i := 0; i < MatrixSize; i++ {
 		result[i] = make([]int, MatrixSize)
 		for j := 0; j < MatrixSize; j++ {
 			for k := 0; k < MatrixSize; k++ {
-				result[i][j] += a[i][k] * b[k][j]
+				result[i][k] += a[i][j] * b[j][k]
 			}
 		}
 	}
 	return result
 }
 
-func multiplySquareMatrix(a, b [][]int, threads int) [][]int {
+func AsyncMultiplySquareMatrix(a, b [][]int, threads int) [][]int {
 	result := make([][]int, MatrixSize)
-	//fmt.Println("running on", threads, "threads")
 
 	rowsPerThread := MatrixSize / threads
 	rowLimits := make([]int, 0)
@@ -54,7 +54,7 @@ func multiplySquareMatrix(a, b [][]int, threads int) [][]int {
 				result[i] = make([]int, MatrixSize)
 				for j := 0; j < MatrixSize; j++ {
 					for k := 0; k < MatrixSize; k++ {
-						result[i][j] += a[i][k] * b[k][j]
+						result[i][k] += a[i][j] * b[j][k]
 					}
 				}
 			}
@@ -73,7 +73,7 @@ func printMatrix(a [][]int) {
 	}
 }
 
-func checkMatrix(a, b [][]int) {
+func compareMatrices(a, b [][]int) {
 	for i := 0; i < MatrixSize; i++ {
 		for j := 0; j < MatrixSize; j++ {
 			if a[i][j] != b[i][j] {
@@ -85,16 +85,16 @@ func checkMatrix(a, b [][]int) {
 
 func main() {
 	fmt.Println("Available threads:", runtime.NumCPU())
-	a := generateInitialMatrix(1)
-	b := generateInitialMatrix(2)
+	a := generateRandomMatrix()
+	b := generateRandomMatrix()
 	start1 := time.Now()
-	res := multiplySquareMatrixNon(a, b)
+	res := multiplySquareMatrix(a, b)
 	fmt.Println("Non thread", time.Since(start1))
 	for i := 1; i <= Threads; i++ {
 		start := time.Now()
-		res2 := multiplySquareMatrix(a, b, i)
+		resAsync := AsyncMultiplySquareMatrix(a, b, i)
 		delta := time.Since(start)
 		fmt.Println(i, "threads", delta)
-		checkMatrix(res, res2)
+		compareMatrices(res, resAsync)
 	}
 }
